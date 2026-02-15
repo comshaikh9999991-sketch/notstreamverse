@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - StreamVerse</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <nav class="navbar scrolled">
+        <div class="nav-container">
+            <a href="../index.html" class="logo">
+                <i class="fas fa-play-circle"></i>
+                <span>Stream<span class="accent">Verse</span></span>
+            </a>
+            <div class="nav-right">
+                <button class="nav-icon" onclick="logout()" title="Logout">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="admin-container">
+        <div class="admin-header">
+            <h1><i class="fas fa-tachometer-alt"></i> Admin Dashboard</h1>
+            <div class="admin-tabs">
+                <button class="admin-tab active" onclick="switchTab('upload')">
+                    <i class="fas fa-cloud-upload-alt"></i> Upload
+                </button>
+                <button class="admin-tab" onclick="switchTab('manage')">
+                    <i class="fas fa-cog"></i> Manage
+                </button>
+                <button class="admin-tab" onclick="switchTab('stats')">
+                    <i class="fas fa-chart-bar"></i> Stats
+                </button>
+            </div>
+        </div>
+
+        <!-- Upload Panel -->
+        <div class="admin-panel active" id="panel-upload">
+            <div class="upload-form">
+                <form id="uploadForm">
+                    <h3 class="form-section-title"><i class="fas fa-info-circle"></i> Basic Information</h3>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label><i class="fas fa-heading"></i> Title *</label>
+                            <input type="text" id="contentTitle" required placeholder="Enter title">
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-tags"></i> Type *</label>
+                            <select id="contentType" required onchange="toggleEpisodeSection()">
+                                <option value="">Select type</option>
+                                <option value="movie">Movie</option>
+                                <option value="series">TV Series</option>
+                                <option value="anime">Anime</option>
+                                <option value="cartoon">Cartoon</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label><i class="fas fa-calendar"></i> Year</label>
+                            <input type="number" id="contentYear" placeholder="2024" min="1900" max="2030">
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-star"></i> Rating (1-10)</label>
+                            <input type="number" id="contentRating" placeholder="8.5" min="0" max="10" step="0.1">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label><i class="fas fa-hd"></i> Quality</label>
+                            <select id="contentQuality">
+                                <option value="HD">HD</option>
+                                <option value="Full HD">Full HD</option>
+                                <option value="4K">4K</option>
+                                <option value="CAM">CAM</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-clock"></i> Duration (Movies only)</label>
+                            <input type="text" id="contentDuration" placeholder="2h 30min">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label><i class="fas fa-theater-masks"></i> Genres (comma separated)</label>
+                        <input type="text" id="contentGenre" placeholder="Action, Sci-Fi, Thriller">
+                    </div>
+
+                    <div class="form-group">
+                        <label><i class="fas fa-align-left"></i> Description</label>
+                        <textarea id="contentDescription" placeholder="Enter plot description..."></textarea>
+                    </div>
+
+                    <h3 class="form-section-title"><i class="fas fa-image"></i> Media</h3>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label><i class="fas fa-portrait"></i> Poster URL *</label>
+                            <input type="url" id="contentPoster" required placeholder="https://image.tmdb.org/t/p/w500/...">
+                            <small style="color: var(--text-muted); font-size: 0.75rem;">
+                                Tip: Use <a href="https://www.themoviedb.org" target="_blank" style="color: var(--primary)">TMDB</a> for posters
+                            </small>
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-panorama"></i> Backdrop URL</label>
+                            <input type="url" id="contentBackdrop" placeholder="https://image.tmdb.org/t/p/original/...">
+                        </div>
+                    </div>
+
+                    <!-- Movie Video URL -->
+                    <div id="movieVideoSection">
+                        <h3 class="form-section-title"><i class="fas fa-video"></i> Video Source</h3>
+                        <div class="form-group">
+                            <label><i class="fas fa-link"></i> Video URL / Embed URL</label>
+                            <input type="url" id="contentVideo" placeholder="Google Drive link, YouTube embed, or direct video URL">
+                            <small style="color: var(--text-muted); font-size: 0.75rem;">
+                                Supported: Google Drive, YouTube, direct .mp4/.webm links, or any embed URL
+                            </small>
+                        </div>
+                    </div>
+
+                    <!-- Series/Anime Episodes -->
+                    <div id="episodeSection" style="display:none;">
+                        <h3 class="form-section-title"><i class="fas fa-list-ol"></i> Episodes</h3>
+
+                        <div class="form-group">
+                            <label><i class="fas fa-layer-group"></i> Season Number</label>
+                            <input type="number" id="seasonNumber" value="1" min="1" max="50">
+                        </div>
+
+                        <div id="episodesList"></div>
+
+                        <button type="button" class="add-episode-btn" onclick="addEpisodeField()">
+                            <i class="fas fa-plus"></i> Add Episode
+                        </button>
+                    </div>
+
+                    <h3 class="form-section-title"><i class="fas fa-cog"></i> Settings</h3>
+
+                    <div class="form-group">
+                        <label style="cursor: pointer;">
+                            <input type="checkbox" id="contentFeatured" style="margin-right: 8px;">
+                            <i class="fas fa-fire"></i> Feature on homepage hero slider
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn-primary" id="submitBtn">
+                        <i class="fas fa-cloud-upload-alt"></i> Upload Content
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Manage Panel -->
+        <div class="admin-panel" id="panel-manage">
+            <div style="margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+                <input type="text" id="manageSearch" placeholder="Search content..." 
+                       style="flex:1; padding: 10px 18px; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 8px; color: white; font-family: 'Poppins', sans-serif; outline: none; min-width: 200px;">
+                <select id="manageFilter" style="padding: 10px 18px; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 8px; color: white; font-family: 'Poppins', sans-serif; cursor: pointer; outline: none;">
+                    <option value="all">All Types</option>
+                    <option value="movie">Movies</option>
+                    <option value="series">Series</option>
+                    <option value="anime">Anime</option>
+                    <option value="cartoon">Cartoons</option>
+                </select>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table class="content-table" id="contentTable">
+                    <thead>
+                        <tr>
+                            <th>Poster</th>
+                            <th>Title</th>
+                            <th>Type</th>
+                            <th>Year</th>
+                            <th>Rating</th>
+                            <th>Views</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="contentTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Stats Panel -->
+        <div class="admin-panel" id="panel-stats">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px;">
+                <div style="background: var(--bg-surface); border-radius: var(--radius); padding: 25px; border: 1px solid var(--border-color);">
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #e50914, #b20710); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-film" style="font-size: 1.3rem; color: white;"></i>
+                        </div>
+                        <div>
+                            <p style="color: var(--text-muted); font-size: 0.8rem;">Total Content</p>
+                            <h2 id="statTotal" style="font-size: 1.5rem;">0</h2>
+                        </div>
+                    </div>
+                </div>
+                <div style="background: var(--bg-surface); border-radius: var(--radius); padding: 25px; border: 1px solid var(--border-color);">
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #6366f1, #4f46e5); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-eye" style="font-size: 1.3rem; color: white;"></i>
+                        </div>
+                        <div>
+                            <p style="color: var(--text-muted); font-size: 0.8rem;">Total Views</p>
+                            <h2 id="statViews" style="font-size: 1.5rem;">0</h2>
+                        </div>
+                    </div>
+                </div>
+                <div style="background: var(--bg-surface); border-radius: var(--radius); padding: 25px; border: 1px solid var(--border-color);">
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #f59e0b, #d97706); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-tv" style="font-size: 1.3rem; color: white;"></i>
+                        </div>
+                        <div>
+                            <p style="color: var(--text-muted); font-size: 0.8rem;">Movies</p>
+                            <h2 id="statMovies" style="font-size: 1.5rem;">0</h2>
+                        </div>
+                    </div>
+                </div>
+                <div style="background: var(--bg-surface); border-radius: var(--radius); padding: 25px; border: 1px solid var(--border-color);">
+                    <div style="display: flex; align-items: center; gap: 15px;">
+                        <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #10b981, #059669); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-dragon" style="font-size: 1.3rem; color: white;"></i>
+                        </div>
+                        <div>
+                            <p style="color: var(--text-muted); font-size: 0.8rem;">Anime</p>
+                            <h2 id="statAnime" style="font-size: 1.5rem;">0</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="../js/supabase-config.js"></script>
+    <script src="../js/auth.js"></script>
+    <script src="../js/admin.js"></script>
+</body>
+</html>

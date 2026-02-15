@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browse - StreamVerse</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar scrolled">
+        <div class="nav-container">
+            <a href="../index.html" class="logo">
+                <i class="fas fa-play-circle"></i>
+                <span>Stream<span class="accent">Verse</span></span>
+            </a>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="../index.html"><i class="fas fa-home"></i> Home</a></li>
+                <li><a href="browse.html?type=movie"><i class="fas fa-film"></i> Movies</a></li>
+                <li><a href="browse.html?type=series"><i class="fas fa-tv"></i> Series</a></li>
+                <li><a href="browse.html?type=anime"><i class="fas fa-dragon"></i> Anime</a></li>
+                <li><a href="browse.html?type=cartoon"><i class="fas fa-hat-wizard"></i> Cartoons</a></li>
+            </ul>
+            <div class="nav-right">
+                <button class="hamburger" id="hamburger">
+                    <span></span><span></span><span></span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="browse-container">
+        <div class="browse-header">
+            <h1 id="browseTitle"><i class="fas fa-th-large"></i> Browse All</h1>
+        </div>
+
+        <div class="filters" id="filters">
+            <button class="filter-btn active" data-filter="all">All</button>
+            <button class="filter-btn" data-filter="action">Action</button>
+            <button class="filter-btn" data-filter="comedy">Comedy</button>
+            <button class="filter-btn" data-filter="drama">Drama</button>
+            <button class="filter-btn" data-filter="horror">Horror</button>
+            <button class="filter-btn" data-filter="sci-fi">Sci-Fi</button>
+            <button class="filter-btn" data-filter="thriller">Thriller</button>
+            <button class="filter-btn" data-filter="romance">Romance</button>
+            <button class="filter-btn" data-filter="fantasy">Fantasy</button>
+            <button class="filter-btn" data-filter="animation">Animation</button>
+            <button class="filter-btn" data-filter="mystery">Mystery</button>
+        </div>
+
+        <div class="content-grid" id="contentGrid"></div>
+
+        <div class="empty-state" id="emptyState" style="display:none;">
+            <i class="fas fa-search"></i>
+            <h3>No content found</h3>
+            <p>Try different filters or check back later.</p>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="footer-bottom">
+            <p>&copy; 2024 StreamVerse. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Detail Modal -->
+    <div class="modal-overlay" id="detailModal">
+        <div class="modal detail-modal">
+            <button class="modal-close detail-close"><i class="fas fa-times"></i></button>
+            <div id="detailContent"></div>
+        </div>
+    </div>
+
+    <script src="../js/supabase-config.js"></script>
+    <script src="../js/auth.js"></script>
+    <script>
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            if (!container) return;
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            const icons = { success: 'fas fa-check-circle', error: 'fas fa-exclamation-circle', info: 'fas fa-info-circle' };
+            toast.innerHTML = `<i class="${icons[type] || icons.info}"></i> ${message}`;
+            container.appendChild(toast);
+            setTimeout(() => { toast.classList.add('removing'); setTimeout(() => toast.remove(), 300); }, 3000);
+        }
+
+        function formatViews(views) {
+            if (views >= 1000000) return (views / 1000000).toFixed(1) + 'M';
+            if (views >= 1000) return (views / 1000).toFixed(1) + 'K';
+            return views.toString();
+        }
+
+        let allContent = [];
+        let filteredContent = [];
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Mobile menu
+            const hamburger = document.getElementById('hamburger');
+            const navLinks = document.getElementById('navLinks');
+            hamburger.addEventListener('click', () => {
+                hamburger.classList.toggle('active');
+                navLinks.classList.toggle('active');
+            });
+
+            // Load content
+            allContent = await db.getAllContent();
+
+            // Parse URL params
+            const params = new URLSearchParams(window.location.search);
+            const type = params.get('type');
+            const genre = params.get('genre');
+            const query = params.get('q');
+
+            // Set title and filter
+            const titleEl = document.getElementById('browseTitle');
+            const typeIcons = { movie: 'fa-film', series: 'fa-tv', anime: 'fa-dragon', cartoon: 'fa-hat-wizard' };
+            const typeLabels = { movie: 'Movies', series: 'TV Series', anime: 'Anime', cartoon: 'Cartoons' };
+
+            if (type) {
+                filteredContent = allContent.filter(c => c.type === type);
+                titleEl.innerHTML = `<i class="fas ${typeIcons[type] || 'fa-th-large'}"></i> ${typeLabels[type] || 'Browse'}`;
+
+                // Highlight active nav
+                document.querySelectorAll('.nav-links a').forEach(link => {
+                    link.classList.remove('active');
+                    if (link.href.includes(`type=${type}`)) link.classList.add('active');
+                });
+            } else if (genre) {
+                filteredContent = allContent.filter(c => c.genre && c.genre.some(g => g.toLowerCase() === genre.toLowerCase()));
+                titleEl.innerHTML = `<i class="fas fa-theater-masks"></i> ${genre.charAt(0).toUpperCase() + genre.slice(1)}`;
+            } else if (query) {
+                const q = query.toLowerCase();
+                filteredContent = allContent.filter(c =>
+                    c.title.toLowerCase().includes(q) ||
+                    (c.genre && c.genre.some(g => g.toLowerCase().includes(q))) ||
+                    c.type.toLowerCase().includes(q)
+                );
+                titleEl.innerHTML = `<i class="fas fa-search"></i> Search: "${query}"`;
+            } else {
+                filteredContent = [...allContent];
+            }
+
+            renderGrid(filteredContent);
+
+            // Genre filters
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+
+                    const filter = btn.dataset.filter;
+                    let baseContent = type ? allContent.filter(c => c.type === type) : [...allContent];
+
+                    if (filter === 'all') {
+                        renderGrid(baseContent);
+                    } else {
+                        const filtered = baseContent.filter(c =>
+                            c.genre && c.genre.some(g => g.toLowerCase().includes(filter.toLowerCase()))
+                        );
+                        renderGrid(filtered);
+                    }
+                });
+            });
+
+            // Detail modal
+            const detailModal = document.getElementById('detailModal');
+            detailModal.querySelector('.detail-close').addEventListener('click', () => detailModal.classList.remove('active'));
+            detailModal.addEventListener('click', (e) => { if (e.target === detailModal) detailModal.classList.remove('active'); });
+        });
+
+        function renderGrid(items) {
+            const grid = document.getElementById('contentGrid');
+            const empty = document.getElementById('emptyState');
+
+            if (items.length === 0) {
+                grid.innerHTML = '';
+                empty.style.display = 'block';
+                return;
+            }
+
+            empty.style.display = 'none';
+            grid.innerHTML = items.map(item => `
+                <div class="content-card" onclick="showDetail('${item.id}')">
+                    <div class="card-poster">
+                        <img src="${item.poster}" alt="${item.title}" loading="lazy"
+                             onerror="this.src='https://via.placeholder.com/200x300/1a1a2e/e50914?text=${encodeURIComponent(item.title)}'">
+                        <div class="card-overlay">
+                            <div class="card-play-btn"><i class="fas fa-play"></i></div>
+                        </div>
+                        <div class="card-badges">
+                            <span class="card-quality">${item.quality || 'HD'}</span>
+                            <span class="card-type">${item.type}</span>
+                        </div>
+                        ${item.rating ? `<div class="card-rating"><i class="fas fa-star"></i> ${item.rating}</div>` : ''}
+                    </div>
+                    <div class="card-info">
+                        <h3>${item.title}</h3>
+                        <div class="card-meta">
+                            <span><i class="fas fa-calendar-alt"></i> ${item.year || 'N/A'}</span>
+                            <span><i class="fas fa-eye"></i> ${formatViews(item.views || 0)}</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function showDetail(id) {
+            const item = allContent.find(c => c.id === id);
+            if (!item) return;
+
+            const modal = document.getElementById('detailModal');
+            const content = document.getElementById('detailContent');
+            const genreTags = (item.genre || []).map(g => `<span class="genre-tag">${g}</span>`).join('');
+
+            let episodesHTML = '';
+            if (item.seasons && item.seasons.length > 0) {
+                const firstSeason = item.seasons[0];
+                episodesHTML = `
+                    <div class="episodes-section">
+                        <h3>Episodes - Season ${firstSeason.season}</h3>
+                        <div class="episode-list">
+                            ${(firstSeason.episodes || []).map(ep => `
+                                <div class="episode-item" onclick="playEp('${item.id}', ${firstSeason.season}, ${ep.episode})">
+                                    <span class="episode-num">${ep.episode}</span>
+                                    <div class="episode-info">
+                                        <h4>${ep.title || 'Episode ' + ep.episode}</h4>
+                                        <p>${ep.duration || ''}</p>
+                                    </div>
+                                    <div class="episode-play"><i class="fas fa-play"></i></div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            content.innerHTML = `
+                <div class="detail-backdrop">
+                    <img src="${item.backdrop || item.poster}" alt="${item.title}"
+                         onerror="this.src='https://via.placeholder.com/900x350/141414/666?text=${encodeURIComponent(item.title)}'">
+                    <div class="detail-backdrop-overlay"></div>
+                </div>
+                <div class="detail-body">
+                    <div class="detail-top">
+                        <div class="detail-poster">
+                            <img src="${item.poster}" alt="${item.title}"
+                                 onerror="this.src='https://via.placeholder.com/160x240/1a1a2e/e50914?text=${encodeURIComponent(item.title)}'">
+                        </div>
+                        <div class="detail-info">
+                            <h1>${item.title}</h1>
+                            <div class="detail-meta">
+                                <span><i class="fas fa-calendar"></i> ${item.year || 'N/A'}</span>
+                                ${item.duration ? `<span><i class="fas fa-clock"></i> ${item.duration}</span>` : ''}
+                                ${item.rating ? `<span><i class="fas fa-star" style="color:var(--accent)"></i> ${item.rating}/10</span>` : ''}
+                                <span class="badge badge-primary">${item.type}</span>
+                            </div>
+                            <div class="detail-genres">${genreTags}</div>
+                            <div class="detail-actions">
+                                <button class="btn-play" onclick="playContent('${item.id}')">
+                                    <i class="fas fa-play"></i> Watch Now
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="detail-description">${item.description || 'No description available.'}</p>
+                    ${episodesHTML}
+                </div>
+            `;
+            modal.classList.add('active');
+        }
+
+        function playContent(id) {
+            const item = allContent.find(c => c.id === id);
+            if (!item) return;
+            sessionStorage.setItem('streamverse_player', JSON.stringify(item));
+            db.addToWatchHistory(id, 10);
+            window.location.href = `player.html?id=${id}`;
+        }
+
+        function playEp(contentId, season, episode) {
+            const item = allContent.find(c => c.id === contentId);
+            if (!item) return;
+            const seasonData = item.seasons ? item.seasons.find(s => s.season == season) : null;
+            const episodeData = seasonData ? seasonData.episodes.find(e => e.episode == episode) : null;
+
+            const playerData = {
+                ...item,
+                currentSeason: season,
+                currentEpisode: episode,
+                currentVideoUrl: episodeData ? episodeData.video_url : '',
+                episodeTitle: episodeData ? episodeData.title : ''
+            };
+            sessionStorage.setItem('streamverse_player', JSON.stringify(playerData));
+            db.addToWatchHistory(contentId, 5);
+            window.location.href = `player.html?id=${contentId}&s=${season}&e=${episode}`;
+        }
+    </script>
+</body>
+</html>

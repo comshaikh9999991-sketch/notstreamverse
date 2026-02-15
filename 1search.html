@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search - StreamVerse</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+    <!-- Same as browse.html but auto-loads with search query -->
+    <script>
+        // Redirect to browse with search query
+        const params = new URLSearchParams(window.location.search);
+        const q = params.get('q');
+        if (q) {
+            window.location.href = `browse.html?q=${encodeURIComponent(q)}`;
+        } else {
+            window.location.href = `browse.html`;
+        }
+    </script>
+</body>
+</html>
